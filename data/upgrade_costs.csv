@@ -1,0 +1,16 @@
+upgrade_id,upgrade_name,category,cost_low_usd,cost_high_usd,cost_midpoint_usd,savings_pct_low,savings_pct_high,savings_basis,recs_features_affected,target_homes,lifespan_years,source
+smart_thermostat,Install smart thermostat,Behavioral,100,300,200,0.06,0.10,heat_cool_dol,TYPETHERM,TYPETHERM!=3,12,ENERGY STAR
+programmable_thermostat,Install programmable thermostat,Behavioral,40,150,90,0.05,0.08,heat_cool_dol,TYPETHERM,"TYPETHERM IN (-2;0;1)",15,DOE
+thermostat_setback,Behavioral thermostat setback (no install),Behavioral,0,0,0,0.05,0.10,heat_cool_dol,TEMPHOME|TEMPGONE|TEMPNITE,always_eligible,1,DOE
+attic_insulation,Upgrade attic insulation to R-49,Insulation,1500,3500,2300,0.10,0.20,heat_cool_dol,ADQINSUL,"ADQINSUL IN (2;3;4)",30,DOE
+wall_insulation,Add or upgrade wall insulation,Insulation,2500,5000,3500,0.08,0.15,heat_cool_dol,ADQINSUL,"ADQINSUL IN (3;4)",40,DOE
+air_sealing,Air sealing and weatherization,Envelope,200,1500,800,0.08,0.15,heat_cool_dol,DRAFTY,DRAFTY<=2,15,DOE
+window_upgrade,Replace single-pane with ENERGY STAR windows,Envelope,8000,20000,13000,0.07,0.15,heat_cool_dol,TYPEGLASS|WINDOWS,TYPEGLASS=1,25,ENERGY STAR
+heat_pump_replace,Replace furnace+AC with high-efficiency heat pump,HVAC,4000,15000,8000,0.20,0.40,heat_cool_dol,EQUIPM|AIRCOND|FUELHEAT|EQUIPAGE,"EQUIPM IN (2;3;4) OR EQUIPAGE>=5",18,DOE
+high_eff_furnace,Replace furnace with 95+ AFUE model,HVAC,3000,7500,5000,0.10,0.20,heat_cool_dol,EQUIPM|FUELHEAT|EQUIPAGE,"EQUIPM IN (2;3;4) AND EQUIPAGE>=5",20,ENERGY STAR
+heat_pump_water_heater,Install heat pump water heater,Water Heating,1500,3500,2400,0.30,0.50,water_heat_dol,FUELH2O|WHEATSIZ|WHEATAGE,FUELH2O=5 AND WHEATAGE>=4,13,ENERGY STAR
+tankless_water_heater,Install tankless water heater,Water Heating,1200,3500,2300,0.08,0.34,water_heat_dol,FUELH2O|WHEATSIZ,WHEATAGE>=4,20,DOE
+led_lighting,Convert most bulbs to LED,Lighting,80,400,200,0.50,0.75,lighting_dol,LGTIN1TO4|LGTIN4TO8|LGTINMORE8|LGTINLED,LGTINLED_share<0.75,15,ENERGY STAR
+energy_star_fridge,Replace refrigerator with ENERGY STAR model,Appliance,800,2500,1500,0.10,0.20,DOLLAREL,NUMFRIG|AGERFRI1,AGERFRI1>=4,14,ENERGY STAR
+energy_star_washer,Replace clothes washer with ENERGY STAR model,Appliance,500,1500,950,0.20,0.30,DOLLAREL,TOPFRONT|WASHTEMP|AGECWASH,"WASHLOAD>=4 AND AGECWASH>=4",12,ENERGY STAR
+low_flow_showerheads,Install low-flow showerheads,Water Heating,20,150,80,0.05,0.10,water_heat_dol,NCOMBATH|NHAFBATH,NCOMBATH>=1,10,DOE
