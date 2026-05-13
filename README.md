@@ -2,19 +2,18 @@
 
 **CPSC 393 Final Project — Spring 2026**
 
-A three-layer machine-learning pipeline for residential energy efficiency, built on the U.S. Energy Information Administration's RECS 2020 microdata. The system classifies households as efficient / average / inefficient within their climate peer group, predicts annual energy expenditure, and produces ROI-aware retrofit recommendations.
+A two-layer machine-learning pipeline for residential energy efficiency, built on the U.S. Energy Information Administration's RECS 2020 microdata. The system classifies households as efficient / average / inefficient within their climate peer group and predicts annual energy expenditure.
 
 ---
 
 ## Motivation
 
-Residential energy use accounts for roughly 20% of U.S. greenhouse-gas emissions. Existing energy-audit tools either require an in-person visit (expensive, slow) or rely on naive whole-home benchmarks that ignore climate, occupancy, and equipment context. *Home Energy Copilot* is a teaching example of how to stitch classification, regression, and rule-based recommendation into a single coherent product on a real, weighted survey dataset.
+Residential energy use accounts for roughly 20% of U.S. greenhouse-gas emissions. Existing energy-audit tools either require an in-person visit (expensive, slow) or rely on naive whole-home benchmarks that ignore climate, occupancy, and equipment context. *Home Energy Copilot* is a teaching example of how to combine classification and regression into a coherent pipeline on a real, weighted survey dataset where target engineering and metric weighting both matter for the conclusions.
 
-The pipeline answers three questions:
+The pipeline answers two questions:
 
 1. **Where does this household sit relative to its climate peers?** (classification)
 2. **What annual energy bill should we expect?** (regression)
-3. **Which retrofits offer the best simple-payback for this specific household?** (recommendation)
 
 ---
 
@@ -51,24 +50,19 @@ CPSC393Final/
 │   ├── recs2020_clean.pkl          # cleaned 18,495 × 69 DataFrame (notebook 01 output)
 │   ├── recs2020_clean.parquet      # parquet copy (when pyarrow is installed)
 │   ├── recs2020_clean_meta.json    # column inventory + sentinel scan
-│   ├── train_test_split.json       # frozen 80/20 stratified split (DOEID lists)
-│   └── upgrade_costs.csv           # 15-row retrofit catalog (DOE / ENERGY STAR)
+│   └── train_test_split.json       # frozen 80/20 stratified split (DOEID lists)
 ├── notebooks/
 │   ├── 01_data_loading.ipynb       # load, clean, derive end-use $, freeze targets
 │   ├── 02_eda.ipynb                # weighted EDA, distributions, correlations
 │   ├── 03_classification.ipynb     # multinomial logistic regression
 │   ├── 04_regression.ipynb         # Elastic Net + Gradient Boosting on TOTALDOL
-│   ├── 05_recommendations.ipynb    # rule-based retrofit recommender
-│   └── 06_results_and_discussion.ipynb   # synthesis, cross-cutting analysis
+│   └── 05_results_and_discussion.ipynb   # synthesis, cross-cutting analysis
 └── models/
     ├── logreg_classification.joblib
     ├── logreg_test_predictions.csv
     ├── elasticnet_regression.joblib
     ├── gbr_regression.joblib
-    ├── regression_test_predictions.csv
-    ├── recommendations_top5.csv
-    ├── recommendations_household_summary.csv
-    └── recommendations_upgrade_frequency.csv
+    └── regression_test_predictions.csv
 ```
 
 ---
@@ -100,8 +94,7 @@ The notebooks are designed to run **in order**, sharing state through saved CSVs
 2. `02_eda.ipynb` — read-only inspection of the cleaned data (no artifacts saved beyond plots).
 3. `03_classification.ipynb` — produces `data/train_test_split.json`, `models/logreg_classification.joblib`, `models/logreg_test_predictions.csv`.
 4. `04_regression.ipynb` — produces `models/elasticnet_regression.joblib`, `models/gbr_regression.joblib`, `models/regression_test_predictions.csv`.
-5. `05_recommendations.ipynb` — produces `models/recommendations_top5.csv`, `models/recommendations_household_summary.csv`, `models/recommendations_upgrade_frequency.csv`.
-6. `06_results_and_discussion.ipynb` — read-only synthesis of everything above.
+5. `05_results_and_discussion.ipynb` — read-only synthesis of everything above.
 
 Notebook 04 grid-searches a Gradient Boosting model and is the slowest step (a few minutes on a laptop). Everything else is sub-minute.
 
@@ -128,17 +121,6 @@ Two models compared head-to-head on the same train/test split:
 
 The original proposal called for SVR; we replaced it with Gradient Boosting because SVR scales poorly past a few thousand rows and ~200 features.
 
-### Layer 3 — Recommendations
-
-A 15-row retrofit catalog (`data/upgrade_costs.csv`, sourced from DOE and ENERGY STAR) drives a rule-based recommender:
-
-- **Eligibility:** `target_homes` rules (e.g. `EQUIPM IN (2;3;4) OR EQUIPAGE>=5`) are compiled into pandas masks via a tiny custom DSL — `IN`, `AND`, `OR`, scalar comparisons. Compilation uses regex transforms + sandboxed `eval` (no `__builtins__`).
-- **Savings:** `annual_savings = savings_pct_mid × matching_end_use_dol`. Each retrofit references one of `heat_cool_dol`, `water_heat_dol`, `lighting_dol`, or `DOLLAREL` — chosen so insulation only saves heating dollars, LED only saves lighting dollars, etc.
-- **Ranking:** simple payback in years, ties broken by larger absolute savings.
-- **Output:** top-5 retrofits per household.
-
-**Population result:** if every test household installed all five of its top-ranked retrofits, total annual savings would be ~$10.5 B — roughly 22% of the $47 B annual bill across the population represented by the test set.
-
 ---
 
 ## Key design choices
@@ -150,9 +132,7 @@ A 15-row retrofit catalog (`data/upgrade_costs.csv`, sourced from DOE and ENERGY
 | Sentinel handling (`-2`, `-9`) | Kept as own category for OHE features; median-imputed for numeric features in the pipeline | Preserves "not applicable" signal for categoricals; keeps numeric scales sane. |
 | Train/test split | 80/20 stratified on `efficiency_class × BA_climate_grp`, frozen as DOEID list | Same split shared across notebooks 03–05. |
 | Regression model swap | `GradientBoostingRegressor` instead of SVR | SVR doesn't scale; GBR captures nonlinearities. |
-| Recommendation savings basis | End-use specific (insulation hits `heat_cool_dol`, etc.) | More physically defensible than scaling `TOTALDOL`. |
-| ROI metric | Simple payback years | Standard in DOE/ENERGY STAR reporting; intuitive; no discount-rate assumption. |
-| Top-N | 5 per household | Balances signal density and UX. |
+| End-use $ derivation | Derive `heat_cool_dol`, `water_heat_dol`, `lighting_dol`, `fridge_dol` from per-fuel BTU columns × per-fuel $/BTU rates; `other_dol` as the residual | Lets EDA show *where* the dollars are concentrated within `TOTALDOL`. Reconciles to total within $0.04 mean error. |
 
 ---
 
@@ -163,10 +143,8 @@ A 15-row retrofit catalog (`data/upgrade_costs.csv`, sourced from DOE and ENERGY
 | Classification | Weighted accuracy | **60.4%** | 33.3% (random) |
 | Regression (GBR) | Weighted RMSE | **$745** | std(TOTALDOL) ≈ $1,063 |
 | Regression (GBR) | Weighted R² | **0.51** | — |
-| Recommendation | Population potential savings | **$10.5 B / yr** | — |
-| Recommendation | Share of total bill | **22.3%** | — |
 
-A noteworthy cross-cutting finding: classifier-flagged *inefficient* households receive **smaller** absolute dollar savings ($407/yr) than classifier-flagged *efficient* households ($469/yr). This is a consequence of the cost-per-sqft target definition: small drafty homes flag inefficient even though their absolute end-use bills are modest. Notebook 06 discusses this honestly rather than papering over it.
+The two layers are **complementary, not redundant**: classification ranks households relative to their climate peers on cost per square foot, while regression predicts absolute dollar bills. A small drafty home can be classified inefficient while still having a modest total bill, and vice versa. Notebook 05 verifies this empirically.
 
 ---
 
@@ -174,29 +152,26 @@ A noteworthy cross-cutting finding: classifier-flagged *inefficient* households 
 
 - **RECS scope.** Cross-sectional, occupied primary U.S. residences only. Vacant homes, second homes, and territories are excluded. Survey was fielded during the 2020 pandemic year.
 - **Self-report.** Most categorical features are respondent-reported, not measured. Equipment age in particular is bucketed into 6 bins.
-- **Savings percentages from marketing sources.** DOE / ENERGY STAR figures may overstate field savings (the prebound/rebound effect).
-- **No retrofit interactions.** The current ranker treats retrofits independently. Top-5 sums can over-count savings (insulation reduces heat-pump savings, etc.).
+- **Linear classifier on a curved boundary.** Multinomial logistic regression assumes log-odds are linear in the OHE features. A tree-based classifier could pick up curvature that the linear model misses.
 - **Frozen-tertile issue.** Tertile cuts are sample-defined. A production deployment needs to freeze them for new-household scoring.
 
-See notebook 06 for the full discussion.
+See notebook 05 for the full discussion.
 
 ---
 
 ## Future work
 
-1. Replace catalog savings with conditional-average-treatment-effect estimates from retrofit-program EM&V studies.
-2. Joint per-household knapsack optimization that respects retrofit interactions.
-3. Probability-weighted recommendations using classifier soft outputs.
-4. Time-of-use and locational pricing via EIA Form 861 utility data.
-5. Calibration diagnostics (reliability diagrams, residual heteroscedasticity).
+1. **Tree-based classifier head-to-head.** Compare multinomial logistic regression against a gradient-boosted classifier on the same features.
+2. **Calibration.** Plot reliability diagrams for the classifier; predicted probabilities `p_efficient`, `p_average`, `p_inefficient` are already saved in `models/logreg_test_predictions.csv`.
+3. **Quantile regression.** RMSE is dominated by a few high-bill outliers. A quantile-loss model (or a Huber loss) would tell a different story about typical-case accuracy.
+4. **Time-of-use & locational pricing.** RECS dollar amounts are annual averages. Tying to EIA Form 861 rates would expose state-level variability.
+5. **Frozen-threshold productionization.** Persist the cost-per-sqft tertile cuts per climate so a new household can be scored without re-fitting the boundaries.
 
 ---
 
 ## References
 
 - U.S. Energy Information Administration. *2020 Residential Energy Consumption Survey (RECS) Public Use Microdata.* Released 2023. https://www.eia.gov/consumption/residential/data/2020/
-- U.S. Department of Energy. *Energy Saver — Home Energy Audits and Retrofit Cost Reference.* https://www.energy.gov/energysaver
-- ENERGY STAR. *Product Specifications and Estimated Annual Savings.* U.S. EPA. https://www.energystar.gov
 
 ---
 
