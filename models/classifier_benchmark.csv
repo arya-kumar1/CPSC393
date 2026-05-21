@@ -1,5 +1,4 @@
 Classifier,Weighted accuracy,Weighted F1,Fit seconds,Role
 Dummy majority,0.3516,0.1829,0.0,naive baseline
 Logistic Regression,0.6043,0.6,,final interpretable report model
-Random Forest quick check,0.5819,0.5746,0.6,"nonlinear comparison, worse"
 Gradient Boosting Classifier quick check,0.6206,0.6195,28.3,best quick accuracy check; promote if optimizing F1

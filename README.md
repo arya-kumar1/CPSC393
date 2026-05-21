@@ -23,7 +23,7 @@ The pipeline answers two questions:
 
 > EIA. *Residential Energy Consumption Survey — 2020 Microdata.* https://www.eia.gov/consumption/residential/data/2020/index.php?view=microdata
 
-The raw CSV (`recs2020_public_v7.csv`, ~56 MB) lives in `data/`. After cleaning, the working dataset is 18,495 × 69 (one row dropped for negative `TOTALDOL`; 65 features kept plus targets, weights, and IDs).
+The raw CSV (`recs2020_public_v7.csv`) lives in `data/`. After cleaning, the working dataset is 18,495 × 69 (one row dropped for negative `TOTALDOL`; 65 features kept plus targets, weights, and IDs).
 
 ### Targets
 
@@ -38,7 +38,6 @@ The raw CSV (`recs2020_public_v7.csv`, ~56 MB) lives in `data/`. After cleaning,
 
 Every fit and every metric in this project uses `sample_weight = NWEIGHT` so results report at the U.S. residential population scale, not the sample scale.
 
----
 
 ## Repository layout
 
@@ -56,7 +55,7 @@ CPSC393Final/
 │   ├── 02_eda.ipynb                # weighted EDA, distributions, correlations
 │   ├── 03_classification.ipynb     # multinomial logistic regression
 │   ├── 04_regression.ipynb         # Elastic Net + Gradient Boosting on TOTALDOL
-│   └── 05_results_and_discussion.ipynb   # synthesis, cross-cutting analysis
+│   └── 05_results_and_discussion.ipynb   # synthesis, analysis
 └── models/
     ├── logreg_classification.joblib
     ├── logreg_test_predictions.csv
@@ -65,8 +64,6 @@ CPSC393Final/
     ├── gbr_regression.joblib
     └── regression_test_predictions.csv
 ```
-
----
 
 ## How to run
 
@@ -92,24 +89,13 @@ The notebooks are designed to run **in order**, sharing state through saved CSVs
 
 Notebook 04 grid-searches a Gradient Boosting model and is the slowest step (a few minutes on a laptop). Everything else is sub-minute.
 
-To rerun from the command line:
-
-```bash
-cd notebooks
-python -m jupyter nbconvert --to notebook --execute --inplace 03_classification.ipynb
-python -m jupyter nbconvert --to notebook --execute --inplace 04_regression.ipynb
-python -m jupyter nbconvert --to notebook --execute --inplace 05_results_and_discussion.ipynb
-```
-
----
-
 ## Pipeline architecture
 
 ### Layer 1 — Classification
 
 **Model:** `LogisticRegression(solver='lbfgs', class_weight=None)` inside an `sklearn.Pipeline` with a `ColumnTransformer` (median-imputed + standard-scaled numeric features, one-hot-encoded categoricals). `GridSearchCV` over `C ∈ {0.01, 0.1, 1, 10}` with `scoring='f1_weighted'`.
 
-**Features:** 55 hand-curated columns (29 numeric, 26 categorical). After OHE: ~216 features.
+**Features:** 55 columns (29 numeric, 26 categorical). After OHE: ~216 features.
 
 **Metrics:** weighted overall accuracy ≈ 60% (33% baseline), per-climate accuracy reported separately.
 
@@ -156,8 +142,6 @@ The original proposal called for SVR; we replaced it with Gradient Boosting beca
 | Classification model choice | Logistic Regression as report model; Gradient Boosting classifier as accuracy-first upgrade | Logistic is more interpretable and already strong; Gradient Boosting improved quick held-out F1 but needs report/slide promotion before becoming the headline model. |
 | End-use $ derivation | Derive `heat_cool_dol`, `water_heat_dol`, `lighting_dol`, `fridge_dol` from per-fuel BTU columns × per-fuel $/BTU rates; `other_dol` as the residual | Lets EDA show *where* the dollars are concentrated within `TOTALDOL`. Reconciles to total within $0.04 mean error. |
 
----
-
 ## Headline results
 
 | Layer | Metric | Result | Baseline |
@@ -167,8 +151,6 @@ The original proposal called for SVR; we replaced it with Gradient Boosting beca
 | Regression (GBR) | Weighted R² | **0.51** | — |
 
 The two layers are **complementary, not redundant**: classification ranks households relative to their climate peers on cost per square foot, while regression predicts absolute dollar bills. A small drafty home can be classified inefficient while still having a modest total bill, and a large well-insulated home can have a high total bill while remaining efficient for its size and climate. Notebook 05 verifies this empirically.
-
----
 
 ## Limitations
 
@@ -180,7 +162,6 @@ The two layers are **complementary, not redundant**: classification ranks househ
 
 See notebook 05 for the full discussion.
 
----
 
 ## Future work
 
@@ -190,19 +171,13 @@ See notebook 05 for the full discussion.
 4. **Time-of-use & locational pricing.** RECS dollar amounts are annual averages. Tying to EIA Form 861 rates would expose state-level variability.
 5. **Frozen-threshold productionization.** Persist the cost-per-sqft tertile cuts per climate so a new household can be scored without re-fitting the boundaries.
 
----
 
 ## References
 
 - U.S. Energy Information Administration. *2020 Residential Energy Consumption Survey (RECS) Public Use Microdata.* Released 2023. https://www.eia.gov/consumption/residential/data/2020/
 
----
 
 ## Contributors
 
 - Arya Kumar
 - Krish Garg
-
----
-
-*Built for CPSC 393 — Spring 2026.*
